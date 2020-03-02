@@ -7,3 +7,14 @@ def aStarHeuristic(graph, source, dest):
 
 def closestNode(graph, location): #tuple location
     return ox.geo_utils.get_nearest_node(graph, location)
+
+def cost(G, edge):
+    return ox.geo_utils.get_route_edge_attributes(G, edge)[0]['length']
+
+def unpackPath(node):
+    nodeList = list()
+    while node[2]:
+        nodeList.append(node[1])
+        node = node[2]
+    nodeList.reverse()
+    return nodeList
