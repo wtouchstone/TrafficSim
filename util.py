@@ -13,16 +13,6 @@ def closestNode(graph, location): #tuple location
 def cost(G, edge):
     return ox.geo_utils.get_route_edge_attributes(G, edge)[0]['length']
 
-def unpackPath(node):
-    nodeList = list()
-    try:
-        while node[2]:
-            nodeList.append(node[1])
-            node = node[2]
-    except:
-        print(node)
-    nodeList.reverse()
-    return nodeList
 
 def gmlAStar(graph, source, dest): #NODE source, NODE dest, returns a path (list of node) from source to dest.
     #explorable = PriorityQueue()
