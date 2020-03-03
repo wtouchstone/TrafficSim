@@ -3,6 +3,7 @@ import networkx as nx
 import xml.dom.minidom
 import numpy as np
 import heapq
+import copy
 def aStarHeuristic(graph, source, dest):
     return 110996.4513 * pow(pow((graph.nodes[source]['x'] - graph.nodes[dest]['x']),2) + pow((graph.nodes[source]['y'] - graph.nodes[dest]['y']),2),.5) #meters times lattitude at 38 degrees
 
@@ -34,9 +35,9 @@ def gmlAStar(graph, source, dest): #NODE source, NODE dest, returns a path (list
     for successor in successors:
         heuristic = aStarHeuristic(graph, successor[1], dest)
         currCost = cost(graph, successor)
-        parent = (0, source, list())
-        totalCost = currCost + parent[0] + heuristic
-        heapq.heappush(openQueue, (totalCost, successor[1], parent))
+        history = [source]
+        totalCost = currCost + heuristic + 0
+        heapq.heappush(openQueue, (totalCost, successor[1], history))
     while openQueue:
         curr = heapq.heappop(openQueue)
         if curr[1] not in visitedSet:
@@ -48,8 +49,9 @@ def gmlAStar(graph, source, dest): #NODE source, NODE dest, returns a path (list
             for successor in successors:
                 heuristic = aStarHeuristic(graph, successor[1], dest)
                 currCost = cost(graph, successor)
-                parent = curr
-                totalCost = currCost + parent[0] + heuristic
-                heapq.heappush(openQueue, (totalCost, successor[1], parent))
-    path = unpackPath(finalDest)
-    return path
+                history = copy.deepcopy(curr[2])
+                history.append(curr[1])
+                totalCost = currCost + curr[0] + heuristic
+                heapq.heappush(openQueue, (totalCost, successor[1], history))
+    #path = unpackPath(finalDest)
+    return finalDest[2]
