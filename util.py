@@ -27,21 +27,23 @@ def gmlAStar(graph, source, dest): #NODE source, NODE dest, returns a path (list
         currCost = cost(graph, successor)
         history = [source]
         totalCost = currCost + heuristic + 0
-        heapq.heappush(openQueue, (totalCost, successor[1], history))
-    while openQueue:
+        heapq.heappush(openQueue, (totalCost, successor[1], history, currCost))
+    print(openQueue)
+    while openQueue:    
         curr = heapq.heappop(openQueue)
+        print(curr)
         if curr[1] not in visitedSet:
             visitedSet.add(curr[1])
             if curr[1] == dest:
-                finalDest = curr
-                break
+                curr[2].append(curr[1])
+                return curr[2]
             successors = graph.edges(curr[1])
             for successor in successors:
                 heuristic = aStarHeuristic(graph, successor[1], dest)
-                currCost = cost(graph, successor)
+                currCost = cost(graph, successor) + curr[3]
                 history = copy.deepcopy(curr[2])
                 history.append(curr[1])
-                totalCost = currCost + curr[0] + heuristic
-                heapq.heappush(openQueue, (totalCost, successor[1], history))
+                totalCost = currCost + curr[3] + heuristic
+                heapq.heappush(openQueue, (totalCost, successor[1], history, currCost))
     #path = unpackPath(finalDest)
     return finalDest[2]

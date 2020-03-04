@@ -16,12 +16,17 @@ basic_stats = ox.basic_stats(G)
 #print(closestNode(G, (33.779609,-84.4061026)))
 #print(ox.geo_utils.get_nearest_edges(G, [33.779609],[-84.4061026], dist = 100))
 #ox.save_load.save_as_osm(G, filename='tech.osm', oneway=True)
-for i in range(10):
-    node1 = np.random.choice(G.nodes)
-    node2 = np.random.choice(G.nodes)
-    path = gmlAStar(G, node1, node2)
-    if path != []:
-        ox.plot_graph_route(G, path)
+
+node1 = np.random.choice(G.nodes)
+node1 = closestNode(G, (34.327687, -84.392856))
+node2 = np.random.choice(G.nodes)
+node2 = closestNode(G, (34.337557, -84.373548))
+path = gmlAStar(G, node1, node2)
+if path != []:
+    ox.plot_graph_route(G, path)
+path = nx.shortest_path(G, node1, node2)
+if path != []:
+    ox.plot_graph_route(G, path)
 
 #ox.plot_graph(G)
 #route = nx.shortest_path(G, np.random.choice(G.nodes), np.random.choice(G.nodes))
