@@ -68,3 +68,165 @@ def get_edge_colors_by_attribute(G, attr, num_bins=5, cmap='viridis', start=0, s
     colors = ox.plot.get_colors(num_bins, cmap, start, stop)
     edge_colors = [colors[int(cat)] if pd.notnull(cat) else na_color for cat in cats]
     return edge_colors
+
+#this is mostly lifted directedly from osmnx. Using it to enable real time graphing as more 
+#samples are taken
+def plot_graph(G, bbox=None, fig_height=6, fig_width=None, margin=0.02,
+               axis_off=True, equal_aspect=False, bgcolor='w', show=True,
+               save=False, close=True, file_format='png', filename='temp',
+               dpi=300, annotate=False, node_color='#66ccff', node_size=15,
+               node_alpha=1, node_edgecolor='none', node_zorder=1,
+               edge_color='#999999', edge_linewidth=1, edge_alpha=1,
+               use_geom=True):
+    """
+    Plot a networkx spatial graph.
+    Parameters
+    ----------
+    G : networkx multidigraph
+    bbox : tuple
+        bounding box as north,south,east,west - if None will calculate from
+        spatial extents of data. if passing a bbox, you probably also want to
+        pass margin=0 to constrain it.
+    fig_height : int
+        matplotlib figure height in inches
+    fig_width : int
+        matplotlib figure width in inches
+    margin : float
+        relative margin around the figure
+    axis_off : bool
+        if True turn off the matplotlib axis
+    equal_aspect : bool
+        if True set the axis aspect ratio equal
+    bgcolor : string
+        the background color of the figure and axis
+    show : bool
+        if True, show the figure
+    save : bool
+        if True, save the figure as an image file to disk
+    close : bool
+        close the figure (only if show equals False) to prevent display
+    file_format : string
+        the format of the file to save (e.g., 'jpg', 'png', 'svg')
+    filename : string
+        the name of the file if saving
+    dpi : int
+        the resolution of the image file if saving
+    annotate : bool
+        if True, annotate the nodes in the figure
+    node_color : string
+        the color of the nodes
+    node_size : int
+        the size of the nodes
+    node_alpha : float
+        the opacity of the nodes
+    node_edgecolor : string
+        the color of the node's marker's border
+    node_zorder : int
+        zorder to plot nodes, edges are always 2, so make node_zorder 1 to plot
+        nodes beneath them or 3 to plot nodes atop them
+    edge_color : string
+        the color of the edges' lines
+    edge_linewidth : float
+        the width of the edges' lines
+    edge_alpha : float
+        the opacity of the edges' lines
+    use_geom : bool
+        if True, use the spatial geometry attribute of the edges to draw
+        geographically accurate edges, rather than just lines straight from node
+        to node
+    Returns
+    -------
+    fig, ax : tuple
+    """
+
+    log('Begin plotting the graph...')
+    node_Xs = [float(x) for _, x in G.nodes(data='x')]
+    node_Ys = [float(y) for _, y in G.nodes(data='y')]
+
+    # get north, south, east, west values either from bbox parameter or from the
+    # spatial extent of the edges' geometries
+    if bbox is None:
+        edges = graph_to_gdfs(G, nodes=False, fill_edge_geometry=True)
+        west, south, east, north = edges.total_bounds
+    else:
+        north, south, east, west = bbox
+
+    # if caller did not pass in a fig_width, calculate it proportionately from
+    # the fig_height and bounding box aspect ratio
+    bbox_aspect_ratio = (north-south)/(east-west)
+    if fig_width is None:
+        fig_width = fig_height / bbox_aspect_ratio
+
+    # create the figure and axis
+    fig, ax = plt.subplots(figsize=(fig_width, fig_height), facecolor=bgcolor)
+    ax.set_facecolor(bgcolor)
+
+    # draw the edges as lines from node to node
+    start_time = time.time()
+    lines = []
+    for u, v, data in G.edges(keys=False, data=True):
+        if 'geometry' in data and use_geom:
+            # if it has a geometry attribute (a list of line segments), add them
+            # to the list of lines to plot
+            xs, ys = data['geometry'].xy
+            lines.append(list(zip(xs, ys)))
+        else:
+            # if it doesn't have a geometry attribute, the edge is a straight
+            # line from node to node
+            x1 = G.nodes[u]['x']
+            y1 = G.nodes[u]['y']
+            x2 = G.nodes[v]['x']
+            y2 = G.nodes[v]['y']
+            line = [(x1, y1), (x2, y2)]
+            lines.append(line)
+
+    # add the lines to the axis as a linecollection
+    lc = LineCollection(lines, colors=edge_color, linewidths=edge_linewidth, alpha=edge_alpha, zorder=2)
+    ax.add_collection(lc)
+    log('Drew the graph edges in {:,.2f} seconds'.format(time.time()-start_time))
+
+    # scatter plot the nodes
+    ax.scatter(node_Xs, node_Ys, s=node_size, c=node_color, alpha=node_alpha, edgecolor=node_edgecolor, zorder=node_zorder)
+
+    # set the extent of the figure
+    margin_ns = (north - south) * margin
+    margin_ew = (east - west) * margin
+    ax.set_ylim((south - margin_ns, north + margin_ns))
+    ax.set_xlim((west - margin_ew, east + margin_ew))
+
+    # configure axis appearance
+    xaxis = ax.get_xaxis()
+    yaxis = ax.get_yaxis()
+
+    xaxis.get_major_formatter().set_useOffset(False)
+    yaxis.get_major_formatter().set_useOffset(False)
+
+    # if axis_off, turn off the axis display set the margins to zero and point
+    # the ticks in so there's no space around the plot
+    if axis_off:
+        ax.axis('off')
+        ax.margins(0)
+        ax.tick_params(which='both', direction='in')
+        xaxis.set_visible(False)
+        yaxis.set_visible(False)
+        fig.canvas.draw()
+
+    if equal_aspect:
+        # make everything square
+        ax.set_aspect('equal')
+        fig.canvas.draw()
+    else:
+        # if the graph is not projected, conform the aspect ratio to not stretch the plot
+        if G.graph['crs'] == settings.default_crs:
+            coslat = np.cos((min(node_Ys) + max(node_Ys)) / 2. / 180. * np.pi)
+            ax.set_aspect(1. / coslat)
+            fig.canvas.draw()
+
+    # annotate the axis with node IDs if annotate=True
+    if annotate:
+        for node, data in G.nodes(data=True):
+            ax.annotate(node, xy=(data['x'], data['y']))
+
+    # save and show the figure as specified
+    fig, ax = save_and_show(fig, ax, save, show, close, filename, file_format, dpi, axis_off)
+    return fig, ax

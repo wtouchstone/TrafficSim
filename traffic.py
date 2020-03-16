@@ -6,8 +6,9 @@ import pandas as pd
 from util import *  
 from pprint import pprint
 ox.utils.config(all_oneway=False)
-G = ox.graph_from_place("Atlanta", network_type='drive')
-#G = ox.graph_from_file("./data/map.osm", netwo)
+G = ox.graph_from_place("brasilia", buffer_dist=6000, network_type='drive')
+#ox.save_load.save_as_osm(G, filename="techdrive.osm")
+#G = ox.graph_from_file("./data/techdrive.osm")
 #ox.elevation.add_edge_grades(G)
 #pprint(basic_stats)
 #ox.plot_graph(G)
@@ -18,7 +19,7 @@ edgeDict = {}
 for edge in G.edges(keys=True, data=True):
     edge[3]['traversals'] = 0
 maxTraversals = 0
-for i in range(10000):
+for i in range(5):
     node1 = np.random.choice(G.nodes)
     node2 = np.random.choice(G.nodes)
     path = gmlAStar(G, node1, node2)
@@ -35,7 +36,7 @@ for i in range(10000):
 edgeattrs = ox.graph_to_gdfs(G, nodes=False).columns
 #beep = ox.plot.get_edge_colors_by_attr(G, 'traversals', num_bins=5)
 beep = get_edge_colors_by_attribute(G, 'traversals', num_bins=250)
-ox.plot_graph(G, edge_color=beep, node_alpha=0, bgcolor='grey', edge_linewidth=4)
+util.plot_graph(G, edge_color=beep, node_alpha=0, bgcolor='grey', save=True, file_format='png', dpi=2000, edge_linewidth=1)
 #ox.plot_graph_route(G, path)
 #print(edgeDict)
 
