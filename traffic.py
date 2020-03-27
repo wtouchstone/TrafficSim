@@ -3,10 +3,15 @@ import networkx as nx
 import xml.dom.minidom
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 from util import *  
 from pprint import pprint
+
+
+
+
 ox.utils.config(all_oneway=False)
-G = ox.graph_from_place("brasilia", buffer_dist=6000, network_type='drive')
+G = ox.graph_from_place("los angeles, ca", buffer_dist=0, network_type='drive')
 #ox.save_load.save_as_osm(G, filename="techdrive.osm")
 #G = ox.graph_from_file("./data/techdrive.osm")
 #ox.elevation.add_edge_grades(G)
@@ -19,26 +24,29 @@ edgeDict = {}
 for edge in G.edges(keys=True, data=True):
     edge[3]['traversals'] = 0
 maxTraversals = 0
-for i in range(5):
-    node1 = np.random.choice(G.nodes)
-    node2 = np.random.choice(G.nodes)
-    path = gmlAStar(G, node1, node2)
+beep = None
+#for i in range(20):
+#    simulate_random(G)
+    #node1 = np.random.choice(G.nodes)
+    #node2 = np.random.choice(G.nodes)
+    #path = gmlAStar(G, node1, node2)
 
-    if path != []:
-        for j in range(1,len(path)):
-            edge = (path[j-1], path[j])
-            ox.geo_utils.get_route_edge_attributes(G, edge)[0]['traversals'] += 1
-            if ox.geo_utils.get_route_edge_attributes(G, edge)[0]['traversals'] > maxTraversals:
-                maxTraversals = ox.geo_utils.get_route_edge_attributes(G, edge)[0]['traversals']
-#for edge in G.edges(keys=True, data=True):
-    #edge[3]['traversals'] /= maxTraversals
-    #print(edge[3]['traversals'])
-edgeattrs = ox.graph_to_gdfs(G, nodes=False).columns
-#beep = ox.plot.get_edge_colors_by_attr(G, 'traversals', num_bins=5)
-beep = get_edge_colors_by_attribute(G, 'traversals', num_bins=250)
-util.plot_graph(G, edge_color=beep, node_alpha=0, bgcolor='grey', save=True, file_format='png', dpi=2000, edge_linewidth=1)
-#ox.plot_graph_route(G, path)
-#print(edgeDict)
+    #if path != []:
+    #    for j in range(1,len(path)):
+    #        ox.geo_utils.get_route_edge_attributes(G, (path[j-1], path[j]))[0]['traversals'] += 1
+            #G.edges[(path[j-1], path[j])] += 1
+            
+#beep = get_edge_colors_by_attribute(G, 'traversals', num_bins=250)
+#ox.plot_graph(G, edge_color=beep, node_alpha=0, bgcolor='grey', save=False, file_format='png', dpi=2000, edge_linewidth=1)
+    #plt.pause(0.1)
+#fig.show()
+
+#plt.show()
+
+#ox.plot_graph_route(G, simulate_random(G))
+
+run_sim_and_graph(G, bgcolor='grey', dpi=1000, num_iters=5)
+
 
 
 #ox.plot_graph(G)

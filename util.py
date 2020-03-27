@@ -5,6 +5,24 @@ import numpy as np
 import heapq
 import copy
 import pandas as pd
+import time
+
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+from osmnx import settings
+from osmnx.core import graph_from_address
+from osmnx.core import graph_from_point
+from osmnx.core import bbox_from_point
+from osmnx.projection import project_graph
+from osmnx.save_load import graph_to_gdfs
+from osmnx.simplify import simplify_graph
+from osmnx.utils import log
+from matplotlib.collections import LineCollection
+from descartes import PolygonPatch
+from shapely.geometry import Polygon
+from shapely.geometry import MultiPolygon
+from osmnx.plot import save_and_show
+
 def aStarHeuristic(graph, source, dest):
     return (1/35.0) * 110996.4513 * pow(pow((graph.nodes[source]['x'] - graph.nodes[dest]['x']),2) + pow((graph.nodes[source]['y'] - graph.nodes[dest]['y']),2),.5) #meters times lattitude at 38 degrees
 
@@ -68,19 +86,28 @@ def get_edge_colors_by_attribute(G, attr, num_bins=5, cmap='viridis', start=0, s
     colors = ox.plot.get_colors(num_bins, cmap, start, stop)
     edge_colors = [colors[int(cat)] if pd.notnull(cat) else na_color for cat in cats]
     return edge_colors
+def simulate_random(G):
+    node1 = np.random.choice(G.nodes)
+    node2 = np.random.choice(G.nodes)
+    path = gmlAStar(G, node1, node2)
+    if path != []:
+        for j in range(1,len(path)):
+            edge = (path[j-1], path[j])
+            ox.geo_utils.get_route_edge_attributes(G, edge)[0]['traversals'] += 1
+    return path
 
 #this is mostly lifted directedly from osmnx. Using it to enable real time graphing as more 
 #samples are taken
-def plot_graph(G, bbox=None, fig_height=6, fig_width=None, margin=0.02,
+def run_sim_and_graph(G, bbox=None, fig_height=6, fig_width=None, margin=0.02,
                axis_off=True, equal_aspect=False, bgcolor='w', show=True,
                save=False, close=True, file_format='png', filename='temp',
-               dpi=300, annotate=False, node_color='#66ccff', node_size=15,
+               dpi=600, annotate=False, node_color='#66ccff', node_size=15,
                node_alpha=1, node_edgecolor='none', node_zorder=1,
                edge_color='#999999', edge_linewidth=1, edge_alpha=1,
-               use_geom=True):
+               use_geom=True, num_iters=20):
     """
     Plot a networkx spatial graph.
-    Parameters
+    Parameters, 
     ----------
     G : networkx multidigraph
     bbox : tuple
@@ -142,11 +169,10 @@ def plot_graph(G, bbox=None, fig_height=6, fig_width=None, margin=0.02,
     log('Begin plotting the graph...')
     node_Xs = [float(x) for _, x in G.nodes(data='x')]
     node_Ys = [float(y) for _, y in G.nodes(data='y')]
-
     # get north, south, east, west values either from bbox parameter or from the
     # spatial extent of the edges' geometries
     if bbox is None:
-        edges = graph_to_gdfs(G, nodes=False, fill_edge_geometry=True)
+        edges = ox.graph_to_gdfs(G, nodes=False, fill_edge_geometry=True)
         west, south, east, north = edges.total_bounds
     else:
         north, south, east, west = bbox
@@ -181,14 +207,14 @@ def plot_graph(G, bbox=None, fig_height=6, fig_width=None, margin=0.02,
             lines.append(line)
 
     # add the lines to the axis as a linecollection
-    lc = LineCollection(lines, colors=edge_color, linewidths=edge_linewidth, alpha=edge_alpha, zorder=2)
-    ax.add_collection(lc)
+    
+    
     log('Drew the graph edges in {:,.2f} seconds'.format(time.time()-start_time))
-
     # scatter plot the nodes
-    ax.scatter(node_Xs, node_Ys, s=node_size, c=node_color, alpha=node_alpha, edgecolor=node_edgecolor, zorder=node_zorder)
+    #ax.scatter(node_Xs, node_Ys, s=node_size, c=node_color, alpha=node_alpha, edgecolor=node_edgecolor, zorder=node_zorder)
 
     # set the extent of the figure
+
     margin_ns = (north - south) * margin
     margin_ew = (east - west) * margin
     ax.set_ylim((south - margin_ns, north + margin_ns))
@@ -201,6 +227,40 @@ def plot_graph(G, bbox=None, fig_height=6, fig_width=None, margin=0.02,
     xaxis.get_major_formatter().set_useOffset(False)
     yaxis.get_major_formatter().set_useOffset(False)
 
+    #eColors = get_edge_colors_by_attribute(G, 'traversals', num_bins=250)
+    #lc = LineCollection(lines, colors=eColors, linewidths=edge_linewidth, alpha=edge_alpha, zorder=2)
+    #ax.add_collection(lc)
+    
+    #plt.pause(2)
+    plt.ion()
+    plt.draw()
+    #eColors = get_edge_colors_by_attribute(G, 'traversals', num_bins=250)
+    #lc = LineCollection(lines, colors=eColors, linewidths=edge_linewidth, alpha=edge_alpha, zorder=2)
+    #ax.add_collection(lc)
+    print('pre')
+    for i in range(num_iters):
+        plt.cla()
+        ax.set_facecolor = bgcolor
+        ax.set_ylim((south - margin_ns, north + margin_ns))
+        ax.set_xlim((west - margin_ew, east + margin_ew))
+        xaxis.get_major_formatter().set_useOffset(False)
+        yaxis.get_major_formatter().set_useOffset(False)
+        ax.set_title(i)
+        ax.set_aspect('equal')
+        ax.axis('off')
+
+        simulate_random(G)
+        eColors = get_edge_colors_by_attribute(G, 'traversals', num_bins=250)
+        lc = LineCollection(lines, colors=eColors, linewidths=edge_linewidth, alpha=edge_alpha, zorder=2)
+        ax.add_collection(lc)
+        plt.pause(0.000001)
+        
+        #print(i)
+    print('post')
+    plt.ioff()
+    plt.show()
+    #ax.add_collection(lc)
+    
     # if axis_off, turn off the axis display set the margins to zero and point
     # the ticks in so there's no space around the plot
     if axis_off:
@@ -228,5 +288,8 @@ def plot_graph(G, bbox=None, fig_height=6, fig_width=None, margin=0.02,
             ax.annotate(node, xy=(data['x'], data['y']))
 
     # save and show the figure as specified
-    fig, ax = save_and_show(fig, ax, save, show, close, filename, file_format, dpi, axis_off)
+    #fig.canvas.draw()
+    #fig, ax = save_and_show(fig, ax, save, show, close, filename, file_format, dpi, axis_off)
+    #fig.canvas.draw()
+    #fig.canvas.flush_events()
     return fig, ax
