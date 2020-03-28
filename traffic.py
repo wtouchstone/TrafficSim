@@ -11,7 +11,7 @@ from pprint import pprint
 
 
 ox.utils.config(all_oneway=False)
-G = ox.graph_from_place("los angeles, ca", buffer_dist=0, network_type='drive')
+G = ox.graph_from_place("atlanta, ga", buffer_dist=0, network_type='drive')
 #ox.save_load.save_as_osm(G, filename="techdrive.osm")
 #G = ox.graph_from_file("./data/techdrive.osm")
 #ox.elevation.add_edge_grades(G)

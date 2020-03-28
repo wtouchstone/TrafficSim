@@ -238,6 +238,7 @@ def run_sim_and_graph(G, bbox=None, fig_height=6, fig_width=None, margin=0.02,
     #lc = LineCollection(lines, colors=eColors, linewidths=edge_linewidth, alpha=edge_alpha, zorder=2)
     #ax.add_collection(lc)
     print('pre')
+    yup = ""
     for i in range(num_iters):
         plt.cla()
         ax.set_facecolor = bgcolor
@@ -249,13 +250,18 @@ def run_sim_and_graph(G, bbox=None, fig_height=6, fig_width=None, margin=0.02,
         ax.set_aspect('equal')
         ax.axis('off')
 
+        t = time.time()
         simulate_random(G)
+        yup += "Time to pathfind "
+        yup += str(time.time() - t)
+        t = time.time()
         eColors = get_edge_colors_by_attribute(G, 'traversals', num_bins=250)
         lc = LineCollection(lines, colors=eColors, linewidths=edge_linewidth, alpha=edge_alpha, zorder=2)
         ax.add_collection(lc)
         plt.pause(0.000001)
-        
-        #print(i)
+        yup += " Time to graph "
+        yup += str(time.time() - t) 
+        print(yup)
     print('post')
     plt.ioff()
     plt.show()
