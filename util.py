@@ -96,6 +96,17 @@ def simulate_random(G):
             ox.geo_utils.get_route_edge_attributes(G, edge)[0]['traversals'] += 1
     return path
 
+def eval_congestion(G): #TODO: create more advanced congestion evaluation
+    for edge in G.edges(keys=True, data=True):
+        num_lanes = 1
+        try:
+            num_lanes = int(edge[3]['lanes'])
+        except:
+            num_lanes = 1
+        edge[3]['congestion'] = edge[3]['traversals'] / num_lanes
+
+
+
 #this is mostly lifted directedly from osmnx. Using it to enable real time graphing as more 
 #samples are taken
 def run_sim_and_graph(G, bbox=None, fig_height=6, fig_width=None, margin=0.02,
@@ -103,8 +114,8 @@ def run_sim_and_graph(G, bbox=None, fig_height=6, fig_width=None, margin=0.02,
                save=False, close=True, file_format='png', filename='temp',
                dpi=600, annotate=False, node_color='#66ccff', node_size=15,
                node_alpha=1, node_edgecolor='none', node_zorder=1,
-               edge_color='#999999', edge_linewidth=1, edge_alpha=1,
-               use_geom=True, num_iters=20):
+               edge_color='#999999', edge_linewidth=1, edge_alpha=1, prior_iters=0,
+               use_geom=True, num_iters=20, draw_freq=50, show_congestion=False):
     """
     Plot a networkx spatial graph.
     Parameters, 
@@ -232,39 +243,32 @@ def run_sim_and_graph(G, bbox=None, fig_height=6, fig_width=None, margin=0.02,
     #ax.add_collection(lc)
     
     #plt.pause(2)
-    plt.ion()
-    plt.draw()
-    #eColors = get_edge_colors_by_attribute(G, 'traversals', num_bins=250)
-    #lc = LineCollection(lines, colors=eColors, linewidths=edge_linewidth, alpha=edge_alpha, zorder=2)
-    #ax.add_collection(lc)
-    print('pre')
-    yup = ""
-    for i in range(num_iters):
-        plt.cla()
-        ax.set_facecolor = bgcolor
-        ax.set_ylim((south - margin_ns, north + margin_ns))
-        ax.set_xlim((west - margin_ew, east + margin_ew))
-        xaxis.get_major_formatter().set_useOffset(False)
-        yaxis.get_major_formatter().set_useOffset(False)
-        ax.set_title(i)
-        ax.set_aspect('equal')
-        ax.axis('off')
+    #plt.ion()
 
-        t = time.time()
+
+    for i in range(1, num_iters+1):
         simulate_random(G)
-        yup += "Time to pathfind "
-        yup += str(time.time() - t)
-        t = time.time()
+       # if (i % draw_freq == 0 or i == num_iters):
+    plt.cla()
+    ax.set_facecolor = bgcolor
+    ax.set_ylim((south - margin_ns, north + margin_ns))
+    ax.set_xlim((west - margin_ew, east + margin_ew))
+    xaxis.get_major_formatter().set_useOffset(False)
+    yaxis.get_major_formatter().set_useOffset(False)
+    ax.set_title(num_iters + prior_iters)
+    ax.set_aspect('equal')
+    ax.axis('off')
+    if (show_congestion):
+        eval_congestion(G)
+        eColors = get_edge_colors_by_attribute(G, 'congestion', num_bins=250)
+    else:
         eColors = get_edge_colors_by_attribute(G, 'traversals', num_bins=250)
-        lc = LineCollection(lines, colors=eColors, linewidths=edge_linewidth, alpha=edge_alpha, zorder=2)
-        ax.add_collection(lc)
-        plt.pause(0.000001)
-        yup += " Time to graph "
-        yup += str(time.time() - t) 
-        print(yup)
-    print('post')
-    plt.ioff()
-    plt.show()
+    lc = LineCollection(lines, colors=eColors, linewidths=edge_linewidth, alpha=edge_alpha, zorder=2)
+    ax.add_collection(lc)
+    #plt.pause(0.000001)
+
+    #plt.ioff()
+    
     #ax.add_collection(lc)
     
     # if axis_off, turn off the axis display set the margins to zero and point
@@ -275,18 +279,18 @@ def run_sim_and_graph(G, bbox=None, fig_height=6, fig_width=None, margin=0.02,
         ax.tick_params(which='both', direction='in')
         xaxis.set_visible(False)
         yaxis.set_visible(False)
-        fig.canvas.draw()
+        #fig.canvas.draw()
 
     if equal_aspect:
         # make everything square
         ax.set_aspect('equal')
-        fig.canvas.draw()
+        #fig.canvas.draw()
     else:
         # if the graph is not projected, conform the aspect ratio to not stretch the plot
         if G.graph['crs'] == settings.default_crs:
             coslat = np.cos((min(node_Ys) + max(node_Ys)) / 2. / 180. * np.pi)
             ax.set_aspect(1. / coslat)
-            fig.canvas.draw()
+            #fig.canvas.draw()
 
     # annotate the axis with node IDs if annotate=True
     if annotate:
@@ -294,8 +298,9 @@ def run_sim_and_graph(G, bbox=None, fig_height=6, fig_width=None, margin=0.02,
             ax.annotate(node, xy=(data['x'], data['y']))
 
     # save and show the figure as specified
-    #fig.canvas.draw()
-    #fig, ax = save_and_show(fig, ax, save, show, close, filename, file_format, dpi, axis_off)
-    #fig.canvas.draw()
+    if save == True:
+        #fig.canvas.draw()
+        fig, ax = save_and_show(fig, ax, save, show, close, filename, file_format, dpi, axis_off)
+    ##fig.canvas.draw()
     #fig.canvas.flush_events()
-    return fig, ax
+    return G, fig, ax
