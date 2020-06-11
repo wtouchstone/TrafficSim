@@ -106,6 +106,32 @@ def eval_congestion(G): #TODO: create more advanced congestion evaluation
         edge[3]['congestion'] = edge[3]['traversals'] / num_lanes
 
 
+def update_axes(G, axes,  num_iters, edge_linewidth=1, edge_alpha=1):
+    axes.collections[0].remove()
+    lines = []
+    for u, v, data in G.edges(keys=False, data=True):
+        if 'geometry' in data and True:
+            # if it has a geometry attribute (a list of line segments), add them
+            # to the list of lines to plot
+            xs, ys = data['geometry'].xy
+            lines.append(list(zip(xs, ys)))
+        else:
+            # if it doesn't have a geometry attribute, the edge is a straight
+            # line from node to node
+            x1 = G.nodes[u]['x']
+            y1 = G.nodes[u]['y']
+            x2 = G.nodes[v]['x']
+            y2 = G.nodes[v]['y']
+            line = [(x1, y1), (x2, y2)]
+            lines.append(line)
+
+    eColors = get_edge_colors_by_attribute(G, 'traversals', num_bins=250)
+    lc = LineCollection(lines, colors=eColors, linewidths=edge_linewidth, alpha=edge_alpha, zorder=2)
+    axes.set_title(num_iters)
+    axes.add_collection(lc)
+
+    
+
 
 #this is mostly lifted directedly from osmnx. Using it to enable real time graphing as more 
 #samples are taken
