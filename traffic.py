@@ -68,51 +68,62 @@ class StartPage(tk.Frame):
     fig = None
     canvas = None
     cumulative_iters = 0
+    def initialize_graph_window(self):
+        self.G = ox.graph_from_place("davisboro, ga", network_type='drive') #create graph window, fill with nothing
+        for edge in self.G.edges(keys=True, data=True):
+            edge[3]['traversals'] = 0
+        self.G, self.fig, self.ax = run_sim_and_graph(self.G, num_iters=0)
+        self.canvas = FigureCanvasTkAgg(self.fig, self)
+        self.canvas.draw()
+        self.canvas.get_tk_widget().grid(row=0, rowspan=7)    
+    
     def initialize_graph(self, location):
         self.G = ox.graph_from_place(location, buffer_dist=0, network_type='drive')
         for edge in self.G.edges(keys=True, data=True):
             edge[3]['traversals'] = 0
-        self.G, self.fig, ax = run_sim_and_graph(self.G, dpi=1000, num_iters=0, save=False, filename="traffic", edge_linewidth=1, show_congestion=False, draw_freq=1)
-        self.canvas = FigureCanvasTkAgg(self.fig, self)
+        #self.G, temp1, temp2 = run_sim_and_graph(self.G, num_iters=0)
+        print("Fetched %s successfully", location)
+        axes = plt.gca()
+        plt.ion()
+        redraw_axes(self.G, axes, 0)
+        plt.ioff()
         self.canvas.draw()
-        self.canvas.get_tk_widget().grid(row=0)
-    def graph(self):
+        self.canvas.get_tk_widget().grid(row=0, rowspan=7)
+
+    def graph(self, iters):
         ox.utils.config(all_oneway=False)
-        iters = int(self.scale.get())
         for i in range(iters):
-            simulate_random(G)
+            simulate_random(self.G)
         axes = plt.gca()
         plt.ion()
         self.cumulative_iters += iters
-        update_axes(G, axes, self.cumulative_iters)
+        update_axes(self.G, axes, self.cumulative_iters)
         plt.ioff()
         self.canvas.draw()
-        self.canvas.get_tk_widget().grid(row=7)
+        self.canvas.get_tk_widget().grid(row=0, rowspan=7)
     def __init__(self, parent, controller):
         tk.Frame.__init__(self,parent)
         label = tk.Label(self, text="Start Page", font=LARGE_FONT)
-        label.grid(row=0, column=1).grid(row=0, pady=10,padx=10, column=1)
+        label.grid(row=0, pady=10,padx=10, column=1)
+        self.initialize_graph_window()
 
-        button = ttk.Button(self, text="Graph",
-                            command=self.graph)
-        button.grid(row=0, column=1).grid(row=1, column=1)
+        scale = ttk.Scale(self, from_=2, to=500, value=True)
+        location_tf = ttk.Entry(self)
+        button_fetch = ttk.Button(self, text="Fetch", command=lambda: self.initialize_graph(location_tf.get()))
+        button_simulate = ttk.Button(self, text="Simulate", command=lambda: self.graph(int(scale.get())))
+        button_save = ttk.Button(self, text="Save Image")
 
-        self.scale = ttk.Scale(self, from_=2, to=500, value=True)
-        self.scale.grid(row=0, column=1).grid(row=2, column=1)
-        label2 = tk.Label(self, text=self.scale.get(), font=LARGE_FONT)
-        label2.grid(row=0, column=1).grid(row=3, column=1)
+        location_tf.grid(row=1,column=1)
+        button_fetch.grid(row=1,column=2)
+        button_simulate.grid(row=2,column=2)
+        scale.grid(row=3, column=1)
+        button_save.grid(row=7, column=0)
 
-        button2 = ttk.Button(self, text="Visit Page 2",
-                            command=lambda: controller.show_frame(PageTwo))
-        button2.grid(row=0, column=1).grid(row=4, column=1)
 
-        button3 = ttk.Button(self, text="Graph Page",
-                            command=lambda: controller.show_frame(PageThree))
-        button3.grid(row=0, column=1).grid(row=5, column=1)
 
-        button4 = ttk.Button(self, text="exit", command=self.destroy)
-        button4.grid(row=0, column=1).grid(row=6, column=1)
-        self.initialize_graph("ball ground, ga")
+        
+
+
 
 
 
