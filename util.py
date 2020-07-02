@@ -86,6 +86,19 @@ def get_edge_colors_by_attribute(G, attr, num_bins=5, cmap='viridis', start=0, s
     colors = ox.plot.get_colors(num_bins, cmap, start, stop)
     edge_colors = [colors[int(cat)] if pd.notnull(cat) else na_color for cat in cats]
     return edge_colors
+
+def get_edge_colors_by_attribute_edges(edges, attr, num_bins=5, cmap='viridis', start=0, stop=1, na_color='none'): 
+    if num_bins is None:
+            num_bins=len(edges)
+    bin_labels = range(num_bins)
+    attr_values = pd.Series([data[attr] for u, v, data in edges])
+    cats = pd.cut(x=attr_values, bins=num_bins, labels=bin_labels)
+    #cats = []
+    #for i in range(num_bins + 1):
+    #    cats.append(float(i) / num_bins)
+    colors = ox.plot.get_colors(num_bins, cmap, start, stop)
+    edge_colors = [colors[int(cat)] if pd.notnull(cat) else na_color for cat in cats]
+    return edge_colors
 def simulate_random(G):
     node1 = np.random.choice(G.nodes)
     node2 = np.random.choice(G.nodes)
@@ -133,10 +146,24 @@ def redraw_axes(G, axes,  num_iters, edge_linewidth=1, edge_alpha=1):
     lc = LineCollection(lines, colors=eColors, linewidths=edge_linewidth, alpha=edge_alpha, zorder=2)
     axes.set_title(num_iters)
     axes.add_collection(lc)
+
+def sortFunc(item):
+    return item[2]['traversals']
 def update_axes(G, axes,  num_iters, edge_linewidth=1, edge_alpha=1):
     axes.collections[0].remove()
     lines = []
-    for u, v, data in G.edges(keys=False, data=True):
+    #G.edges(keys=False, data=True).sort()
+    #sortededges = list(G.edges(keys=False, data=True))
+    #sortededges.sort(key=sortFunc)
+    sortededges = sorted(G.edges(keys=False, data=True), key=lambda t: t[2].get('traversals', 1))
+    #print(edges)
+    #G.remove_edges_from(list(G.edges))
+    #for i in edges:
+    #    print(i)
+    #    G.add_edge(i[0], i[1], **i[2])
+    #G.add_edges_from(edges)
+    #print(G.edges(keys=False, data=True))
+    for u, v, data in sortededges: #G.edges(keys=False, data=True):
         if 'geometry' in data and True:
             # if it has a geometry attribute (a list of line segments), add them
             # to the list of lines to plot
@@ -152,8 +179,9 @@ def update_axes(G, axes,  num_iters, edge_linewidth=1, edge_alpha=1):
             line = [(x1, y1), (x2, y2)]
             lines.append(line)
 
-    eColors = get_edge_colors_by_attribute(G, 'traversals', num_bins=250)
+    eColors = get_edge_colors_by_attribute_edges(sortededges, 'traversals', num_bins=250)
     lc = LineCollection(lines, colors=eColors, linewidths=edge_linewidth, alpha=edge_alpha, zorder=2)
+    print(lc)
     axes.set_title(num_iters)
     axes.add_collection(lc)
 
