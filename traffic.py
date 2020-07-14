@@ -28,7 +28,7 @@ class TrafficSim(tk.Tk):
         tk.Tk.__init__(self, *args, **kwargs)
 
         tk.Tk.wm_title(self, "Traffic Simulator")
-        tk.Tk.iconbitmap(self,default='bin/icon.ico')
+        tk.Tk.iconbitmap(self,default='resources/icon.ico')
         
         
         container = ttk.Frame(self)
@@ -101,6 +101,7 @@ class StartPage(tk.Frame):
         axes = plt.gca()
         plt.ion()
         self.status_text.set("Simulation completed, updating plot.")
+        self.update()
         self.cumulative_iters += iters
         update_axes(self.G, axes, self.cumulative_iters, self.congestion)
         plt.ioff()
