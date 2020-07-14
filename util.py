@@ -22,6 +22,7 @@ from descartes import PolygonPatch
 from shapely.geometry import Polygon
 from shapely.geometry import MultiPolygon
 from osmnx.plot import save_and_show
+import math as m
 
 def aStarHeuristic(graph, source, dest):
     return (1/35.0) * 110996.4513 * pow(pow((graph.nodes[source]['x'] - graph.nodes[dest]['x']),2) + pow((graph.nodes[source]['y'] - graph.nodes[dest]['y']),2),.5) #meters times lattitude at 38 degrees
@@ -78,7 +79,7 @@ def get_edge_colors_by_attribute(G, attr, num_bins=5, cmap='viridis', start=0, s
     if num_bins is None:
             num_bins=len(G.edges())
     bin_labels = range(num_bins)
-    attr_values = pd.Series([data[attr] for u, v, key, data in G.edges(keys=True, data=True)])
+    attr_values = pd.Series([m.log(data[attr] + 1,10) for u, v, key, data in G.edges(keys=True, data=True)])
     cats = pd.cut(x=attr_values, bins=num_bins, labels=bin_labels)
     #cats = []
     #for i in range(num_bins + 1):
@@ -116,14 +117,20 @@ def eval_congestion(G): #TODO: create more advanced congestion evaluation
             num_lanes = int(edge[3]['lanes'])
         except:
             num_lanes = 1
-        edge[3]['congestion'] = edge[3]['traversals'] / num_lanes
+        try:
+            speed_lim = int(edge[3]['maxspeed'])
+        except:
+            speed_lim = 35
 
+        edge[3]['congestion'] = edge[3]['traversals'] / num_lanes
+        edge[3]['avgspeed'] = edge[3]['congestion'] * speed_lim
 
 def redraw_axes(G, axes,  num_iters, edge_linewidth=1, edge_alpha=1):
     axes.collections[0].remove()
     lines = []
     edges = ox.graph_to_gdfs(G, nodes=False, fill_edge_geometry=True)
     west, south, east, north = edges.total_bounds
+    edge_linewidth = edge_linewidth * 0.03/(abs(north - south))
     axes.set_ylim((south, north))
     axes.set_xlim((west, east))
     for u, v, data in G.edges(keys=False, data=True):
@@ -147,41 +154,61 @@ def redraw_axes(G, axes,  num_iters, edge_linewidth=1, edge_alpha=1):
     axes.set_title(num_iters)
     axes.add_collection(lc)
 
+def calc_width_from_colors(colors, weight, sizeweight):
+    widths = list()
+    for i in range(len(colors)):
+        r, g, b = colors[i][0], colors[i][1], colors[i][2]
+        luminance = (0.2126*r + 0.7152*g + 0.0722*b) #found this bad boy on stackoverflow
+        luminancenorm = (luminance - 0.084) * 1.273
+        alpha = luminancenorm * 2
+        if (alpha < 0.3):
+            colors[i] = (colors[i][0], colors[i][1], colors[i][2], 0.3)
+        elif (alpha > 1):
+            colors[i] = (colors[i][0], colors[i][1], colors[i][2], 1)
+        else:
+            colors[i] = (colors[i][0], colors[i][1], colors[i][2], alpha) #have to account for imprecision
+        #print(luminancenorm)
+        widths.append(luminance * weight * sizeweight + .1)
+    return widths
+
+
+
 def sortFunc(item):
     return item[2]['traversals']
-def update_axes(G, axes,  num_iters, edge_linewidth=1, edge_alpha=1):
+
+def calc_size_weight(north, south): #result is smaller for larger area
+    height = abs(north - south)
+    root_height = pow(height, 1/10)
+    scalar = 0.5
+    weight = pow(root_height, -1) * scalar
+    return weight
+
+
+def update_axes(G, axes,  num_iters, congestion, edge_linewidth=1, edge_alpha=1):
+    #print(type(axes))
     axes.collections[0].remove()
     lines = []
-    #G.edges(keys=False, data=True).sort()
-    #sortededges = list(G.edges(keys=False, data=True))
-    #sortededges.sort(key=sortFunc)
-    sortededges = sorted(G.edges(keys=False, data=True), key=lambda t: t[2].get('traversals', 1))
-    #print(edges)
-    #G.remove_edges_from(list(G.edges))
-    #for i in edges:
-    #    print(i)
-    #    G.add_edge(i[0], i[1], **i[2])
-    #G.add_edges_from(edges)
-    #print(G.edges(keys=False, data=True))
-    for u, v, data in sortededges: #G.edges(keys=False, data=True):
+    west, south, east, north = (ox.graph_to_gdfs(G, nodes=False, fill_edge_geometry=True)).total_bounds
+    #edge_linewidth = edge_linewidth * 0.03/(abs(north - south))
+    sortededges = sorted(G.edges(keys=False, data=True), key=lambda t: t[2].get('avgspeed', 1))
+    for u, v, data in sortededges:
         if 'geometry' in data and True:
-            # if it has a geometry attribute (a list of line segments), add them
-            # to the list of lines to plot
             xs, ys = data['geometry'].xy
             lines.append(list(zip(xs, ys)))
         else:
-            # if it doesn't have a geometry attribute, the edge is a straight
-            # line from node to node
             x1 = G.nodes[u]['x']
             y1 = G.nodes[u]['y']
             x2 = G.nodes[v]['x']
             y2 = G.nodes[v]['y']
             line = [(x1, y1), (x2, y2)]
             lines.append(line)
-
-    eColors = get_edge_colors_by_attribute_edges(sortededges, 'traversals', num_bins=250)
-    lc = LineCollection(lines, colors=eColors, linewidths=edge_linewidth, alpha=edge_alpha, zorder=2)
-    print(lc)
+    if congestion:
+        eval_congestion(G)
+        eColors = get_edge_colors_by_attribute_edges(sortededges, 'avgspeed', num_bins=5)
+    else:
+        eColors = get_edge_colors_by_attribute_edges(sortededges, 'traversals', num_bins=5)
+    widths = calc_width_from_colors(eColors, 3, calc_size_weight(north, south))    
+    lc = LineCollection(lines, colors=eColors, linewidths=widths, zorder=2)
     axes.set_title(num_iters)
     axes.add_collection(lc)
 
