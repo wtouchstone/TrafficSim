@@ -15,12 +15,7 @@ import tkinter as tk
 from tkinter import ttk
 
 matplotlib.use("TkAgg")
-
-
 ox.utils.config(all_oneway=False)
-
-
-#G, fig, ax = run_sim_and_graph(G, dpi=1000, num_iters=10, save=False, filename="traffic", edge_linewidth=1, show_congestion=False, draw_freq=1)
 LARGE_FONT= ("Verdana", 12)
 
 
@@ -32,7 +27,6 @@ class TrafficSim(tk.Tk):
         
         tk.Tk.__init__(self, *args, **kwargs)
 
-        #tk.Tk.iconbitmap(self, default="clienticon.ico")
         tk.Tk.wm_title(self, "Traffic Simulator")
         tk.Tk.iconbitmap(self,default='bin/icon.ico')
         
@@ -43,8 +37,6 @@ class TrafficSim(tk.Tk):
         container.grid_columnconfigure(0, weight=1)
 
         self.frames = {}
-
-      
 
         frame = StartPage(container, self)
 
@@ -136,7 +128,6 @@ class StartPage(tk.Frame):
 
     def __init__(self, parent, controller):
         tk.Frame.__init__(self,parent)
-        #self.(False, ttk.PhotoImage(file="icon.png"))
         label = tk.Label(self, text="Traffic Congestion Simulator", font=LARGE_FONT)
         label.grid(row=0, pady=10,padx=10, column=1, columnspan=3)
         self.initialize_graph_window()
@@ -179,36 +170,8 @@ class StartPage(tk.Frame):
 
 
 
-        
-
-
-
-
-
-
-
-
 app = TrafficSim()
 app.mainloop()
-#ani = animation.FuncAnimation(ax, animate, interval=1000)
-
-
-
-
-
-#ox.save_load.save_as_osm(G, filename="techdrive.osm")
-#G = ox.graph_from_file("./data/techdrive.osm")
-#ox.elevation.add_edge_grades(G)
-#pprint(basic_stats)
-#ox.plot_graph(G)
-edgeDict = {}
-
-
-
-
-node = np.random.choice(G.nodes)
-
-
 
 
 
